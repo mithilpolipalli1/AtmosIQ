@@ -1,0 +1,20 @@
+{
+  "python.defaultInterpreterPath": "C:\\Users\\mithi\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+  "python.analysis.extraPaths": [
+    "C:\\Users\\mithi\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages",
+    "c:\\Users\\mithi\\Urban pulse Hackathon\\urbanpulse-backend",
+    "c:\\Users\\mithi\\Urban pulse Hackathon\\urbanpulse-backend\\backend",
+    "c:\\Users\\mithi\\Urban pulse Hackathon\\urbanpulse-backend\\data_pipeline"
+  ],
+  "python.analysis.autoSearchPaths": true,
+  "python.analysis.diagnosticMode": "workspace",
+  "python.analysis.typeCheckingMode": "off",
+  "python.autoComplete.extraPaths": [
+    "c:\\Users\\mithi\\Urban pulse Hackathon\\urbanpulse-backend",
+    "c:\\Users\\mithi\\Urban pulse Hackathon\\urbanpulse-backend\\backend"
+  ],
+  "pylance.plugins.pydantic": true,
+  "pyre.enableTypeErrors": false,
+  "pyre.enabled": false,
+  "editor.formatOnSave": false
+}

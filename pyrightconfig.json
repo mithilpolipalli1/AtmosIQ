@@ -1,0 +1,25 @@
+{
+  "pythonVersion": "3.13",
+  "pythonPlatform": "Windows",
+  "venvPath": "C:/Users/mithi/AppData/Local/Programs/Python/Python313",
+  "extraPaths": [
+    "./urbanpulse-backend",
+    "./urbanpulse-backend/backend",
+    "./urbanpulse-backend/data_pipeline"
+  ],
+  "typeCheckingMode": "off",
+  "useLibraryCodeForTypes": true,
+  "reportMissingImports": "none",
+  "reportMissingModuleSource": "none",
+  "reportAttributeAccessIssue": "none",
+  "reportGeneralTypeIssues": "none",
+  "exclude": [
+    "**/__pycache__",
+    "**/.pyre",
+    "**/node_modules"
+  ],
+  "analysis": {
+    "autoSearchPaths": true,
+    "useLibraryCodeForTypes": true
+  }
+}

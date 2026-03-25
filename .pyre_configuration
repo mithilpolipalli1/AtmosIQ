@@ -1,0 +1,17 @@
+{
+  "site_package_search_strategy": "all",
+  "search_path": [
+    {"site-package": "C:/Users/mithi/AppData/Local/Programs/Python/Python313/Lib/site-packages"},
+    {"root": "."},
+    {"root": "urbanpulse-backend"},
+    {"root": "urbanpulse-backend/backend"},
+    {"root": "urbanpulse-backend/data_pipeline"}
+  ],
+  "source_directories": [
+    {"root": "urbanpulse-backend"}
+  ],
+  "exclude": [
+    "**/__pycache__/**",
+    "**/node_modules/**"
+  ]
+}
