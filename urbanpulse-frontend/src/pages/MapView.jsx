@@ -9,6 +9,7 @@ export default function MapView({ globalCity, setGlobalCity }) {
   const [cities, setCities] = useState([]);
   const [cityData, setCityData] = useState([]);
   const [_loading, setLoading] = useState(true);
+  const [showDetails, setShowDetails] = useState(false);
 
   const now = new Date();
   const dateStr = now.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -132,7 +133,7 @@ export default function MapView({ globalCity, setGlobalCity }) {
 
       {/* ── LEFT PANEL: MAIN STATISTICS ───────────────────────── */}
       <div className="absolute bottom-10 left-10 z-50 pointer-events-auto w-[320px]">
-         <div className="bg-[#111629]/95 backdrop-blur-xl border border-white/5 rounded-[32px] p-8 shadow-3xl space-y-8 group overflow-hidden">
+         <div className="bg-[#111629]/95 backdrop-blur-xl border border-white/5 rounded-[32px] p-8 shadow-3xl space-y-8 group overflow-hidden transition-all duration-500">
             <div>
                <h2 className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-8 italic">Main Statistics</h2>
                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest opacity-60 mb-2">AQI</p>
@@ -145,14 +146,42 @@ export default function MapView({ globalCity, setGlobalCity }) {
             </div>
 
             <div className="pt-8 border-t border-white/5 space-y-5">
-               <div className="flex justify-between items-center">
+               <div className="flex justify-between items-center bg-transparent">
                   <h3 className="text-xs font-black uppercase text-white tracking-widest leading-none">Risk of Pollution</h3>
-                  <button className="bg-[#fca311] text-black text-[9px] font-black uppercase tracking-widest px-6 py-2 rounded-xl hover:bg-white transition-all shadow-xl">Details</button>
+                  <button 
+                     onClick={() => setShowDetails(!showDetails)}
+                     className={`text-[9px] font-black uppercase tracking-widest px-6 py-2 rounded-xl transition-all shadow-xl ${
+                        showDetails 
+                        ? 'bg-white text-black' 
+                        : 'bg-[#fca311] text-black hover:bg-white'
+                     }`}
+                  >
+                     {showDetails ? 'Close' : 'Details'}
+                  </button>
                </div>
                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                   <div className="bg-[#fca311] h-full" style={{ width: `${Math.min((selAqiVal / 500) * 100, 100)}%` }}></div>
                </div>
             </div>
+
+            {/* ── INTERACTIVE EXPANSION PANEL ── */}
+            {showDetails && selCard?.aqi?.components && (
+               <div className="pt-6 border-t border-white/5 animate-in slide-in-from-top-2 fade-in duration-500">
+                  <h4 className="text-[9px] font-black uppercase text-slate-500 tracking-widest mb-4">Pollutant Breakdown</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                     {Object.entries(selCard.aqi.components).map(([key, val]) => (
+                        <div key={key} className="bg-white/3 hover:bg-white/8 transition-colors p-3 rounded-2xl flex flex-col justify-between border border-white/5">
+                           <span className="text-[8px] font-black uppercase tracking-widest text-indigo-400 mb-1">
+                              {key.replace('_', '.')}
+                           </span>
+                           <span className="text-[13px] font-black text-white leading-none">
+                              {Number(val).toFixed(key === 'co' ? 0 : 1)} <span className="text-[7px] text-slate-500 font-bold ml-0.5 tracking-tight">µg/m³</span>
+                           </span>
+                        </div>
+                     ))}
+                  </div>
+               </div>
+            )}
          </div>
       </div>
 

@@ -16,5 +16,9 @@
   "pylance.plugins.pydantic": true,
   "pyre.enableTypeErrors": false,
   "pyre.enabled": false,
-  "editor.formatOnSave": false
+  "editor.formatOnSave": false,
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingImports": "none",
+    "reportMissingModuleSource": "none"
+  }
 }

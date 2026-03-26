@@ -76,11 +76,12 @@ def fetch_air_quality(city_name: str):
     # Ensure backend uses true Indian AQI 0-500 scale instead of OpenWeather's 1-5 index for accurate Z-scores
     real_aqi = calculate_indian_aqi(pm25)
 
+    import time
     return {
         "city": city_name,
         "aqi": real_aqi,
         "components": air["components"],
-        "timestamp": air["dt"],
+        "timestamp": int(time.time()),
         "lat": coords["lat"],
         "lon": coords["lon"]
     }

@@ -1,11 +1,12 @@
 {
   "pythonVersion": "3.13",
   "pythonPlatform": "Windows",
-  "venvPath": "C:/Users/mithi/AppData/Local/Programs/Python/Python313",
+  "pythonPath": "C:/Users/mithi/AppData/Local/Programs/Python/Python313/python.exe",
   "extraPaths": [
     "./urbanpulse-backend",
     "./urbanpulse-backend/backend",
-    "./urbanpulse-backend/data_pipeline"
+    "./urbanpulse-backend/data_pipeline",
+    "C:/Users/mithi/AppData/Local/Programs/Python/Python313/Lib/site-packages"
   ],
   "typeCheckingMode": "off",
   "useLibraryCodeForTypes": true,

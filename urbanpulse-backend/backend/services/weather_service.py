@@ -30,6 +30,7 @@ def fetch_weather(city_name: str):
         temp += random.uniform(3.0, 5.0)
         wind *= random.uniform(0.1, 0.4) # Stagnant air
 
+    import time
     return {
         "city": data["name"],
         "temperature_c": float(f"{temp:.2f}"),
@@ -38,5 +39,5 @@ def fetch_weather(city_name: str):
         "weather": data["weather"][0]["main"],
         "weather_description": data["weather"][0]["description"],
         "wind_speed": float(f"{max(0.0, wind):.2f}"),
-        "timestamp": data["dt"]
+        "timestamp": int(time.time())
     }

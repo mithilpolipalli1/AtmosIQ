@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { getLatestAnomaly, getCities } from "../api/api";
-import { Bike, ShieldAlert, Timer, ShieldCheck, Activity, Brain } from "lucide-react";
+import { Bike, ShieldAlert, Timer, ShieldCheck, Activity } from "lucide-react";
 
 export default function DeliveryAdvisory({ globalCity, setGlobalCity }) {
   const [anomaly, setAnomaly] = useState(null);
@@ -17,17 +17,28 @@ export default function DeliveryAdvisory({ globalCity, setGlobalCity }) {
 
   useEffect(() => {
     if (!globalCity) return;
-    setLoading(true);
-    getLatestAnomaly(globalCity)
+    let cancelled = false;
+    const controller = new AbortController();
+
+    getLatestAnomaly(globalCity, { signal: controller.signal })
       .then(res => {
-        setAnomaly(res.data?.data || res.data);
-        setLoading(false);
+        if (!cancelled) {
+          setAnomaly(res.data?.data || res.data);
+          setLoading(false);
+        }
       })
       .catch(err => {
-        console.error(err);
-        setAnomaly(null);
-        setLoading(false);
+        if (!cancelled) {
+          console.error(err);
+          setAnomaly(null);
+          setLoading(false);
+        }
       });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [globalCity]);
 
   // If no anomaly exists, show a standard fallback
@@ -42,7 +53,6 @@ export default function DeliveryAdvisory({ globalCity, setGlobalCity }) {
   const isHighRisk = ["CRITICAL", "HIGH"].includes(advisory.risk_level);
   const isMediumRisk = advisory.risk_level === "MEDIUM";
   
-  const accentColor = isHighRisk ? "rose" : isMediumRisk ? "amber" : "emerald";
   const bgAccent = isHighRisk ? "bg-rose-500" : isMediumRisk ? "bg-amber-500" : "bg-emerald-500";
   const textAccent = isHighRisk ? "text-rose-500" : isMediumRisk ? "text-amber-500" : "text-emerald-500";
   const borderAccent = isHighRisk ? "border-rose-500/30" : isMediumRisk ? "border-amber-500/30" : "border-emerald-500/30";

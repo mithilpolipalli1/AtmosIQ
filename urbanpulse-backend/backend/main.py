@@ -224,6 +224,9 @@ def get_latest_anomaly(city_name: str, db: Session = Depends(get_db)):
 def test_anomaly(city_name: str, db: Session = Depends(get_db)):
     try:
         now_ts = int(time.time())
+        zone = next((z for z in CITIES if z["name"] == city_name), None)
+        zone_lat = zone["lat"] if zone else 0.0
+        zone_lon = zone["lon"] if zone else 0.0
 
         weather = CityWeather(
             city=city_name,
@@ -238,7 +241,7 @@ def test_anomaly(city_name: str, db: Session = Depends(get_db)):
 
         air = CityAirQuality(
             city=city_name,
-            aqi=999,
+            aqi=420,  # Ensure consistent standard
             components={
                 "co": 1200.0,
                 "no": 10.0,
@@ -250,8 +253,8 @@ def test_anomaly(city_name: str, db: Session = Depends(get_db)):
                 "nh3": 8.0,
             },
             source_timestamp=now_ts,
-            lat=17.3850,
-            lon=78.4867,
+            lat=zone_lat,
+            lon=zone_lon,
         )
 
         db.add(weather)

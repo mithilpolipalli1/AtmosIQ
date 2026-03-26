@@ -17,5 +17,5 @@ export const getHistoryAirQuality = (city) => API.get(`/history/air-quality/${ci
 
 // Anomalies (alerts / highlight box)
 export const getAnomaliesByCity = (city) => API.get(`/anomalies/${city}`);
-export const getLatestAnomaly = (city) => API.get(`/anomalies/${city}/latest`);
+export const getLatestAnomaly = (city, config) => API.get(`/anomalies/${city}/latest`, config);
 export const triggerTestAnomaly = (city) => API.post(`/test/anomaly/${city}`);

@@ -65,22 +65,43 @@ def get_severity(z: float) -> str:
 
 def generate_insight(aqi: float, wind_speed: float, humidity: float, z_score: float) -> str:
     if aqi > 200 and wind_speed < 2:
-        return "High AQI likely due to stagnant air and low wind speed."
+        return "Critical accumulation of particulates due to extremely stagnant air conditions."
     if aqi > 150 and humidity > 70:
-        return "Elevated AQI possibly influenced by high humidity trapping pollutants."
+        return "High atmospheric moisture is currently compounding particulate density."
+    if aqi > 100 and wind_speed > 5:
+        return "Elevated pollutants are actively being dispersed by high wind currents."
+    
     if abs(z_score) > 2.5:
-        return f"Sudden abnormal {'spike' if z_score > 0 else 'drop'} compared to recent baseline."
-    return "Anomaly detected but no clear dominant environmental factor at the time of historical recording."
+        direction = "surge" if z_score > 0 else "drop"
+        return f"Statistically significant {direction} in pollution levels compared to recent baseline."
+    
+    if z_score > 0.5:
+        return "Minor elevation in local air toxicity. Routine variance or mild environmental shift."
+        
+    if z_score < -0.5:
+        return "Unexpected improvement in air quality. Likely a temporary atmospheric clearance."
+
+    return "Micro-fluctuations detected by the ML isolation forest algorithm."
 
 
 def generate_cause(aqi: float, wind_speed: float, humidity: float, z_score: float) -> str:
     if aqi > 200 and wind_speed < 2:
         return "Stagnant Air Conditions"
     if aqi > 150 and humidity > 70:
-        return "High Atmospheric Moisture"
+        return "Pollutant Trapping by Moisture"
+    if aqi > 100 and wind_speed > 5:
+        return "Wind-Driven Dispersal"
+        
     if abs(z_score) > 2.5:
-        return "Sudden Baseline Deviation"
-    return "Natural Variance"
+        return "Sudden Environmental Shift"
+        
+    if z_score > 0.5:
+        return "Minor Particulate Accumulation"
+        
+    if z_score < -0.5:
+        return "Atmospheric Clearance"
+        
+    return "Algorithmic Micro-Variance"
 
 
 def get_atmospheric_response(severity: str, insight: str):
