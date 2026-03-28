@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "https://atmosiqbackend-r1ltcf8o.b4a.run",
+  baseURL: import.meta.env.VITE_API_URL || "https://atmosiq-xcj0.onrender.com",
 });
 
 // Cities (dropdown)
