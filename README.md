@@ -24,3 +24,6 @@ Instead of generic fallback alerts, AtmosIQ cross-references raw micro-pollutant
 
 ### 4. Interactive Live Dashboard
 The React frontend pulls this database geometry and live metric stream into an interactive Map (`MapView.jsx`). Real-time coordinate translation anchors city readouts across the map. Clicking on 'Details' slides out an interactive bento-box exposing the real-time breakdown of up to 8 live micro-pollutants tracked continuously under the hood.
+
+## Contributors
+- Akshith Varma
