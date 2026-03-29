@@ -32,3 +32,10 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #3B4264;
 }
+
+/* Shimmer animation for skeleton loading states */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

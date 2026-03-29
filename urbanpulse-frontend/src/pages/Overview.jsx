@@ -3,6 +3,8 @@ import { getCities, getStoredWeather, getStoredAirQuality, getLatestAnomaly } fr
 import { calculateIndianAQI } from "../utils/aqiCalc";
 import { MapContainer, TileLayer, CircleMarker, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { useApiCache } from "../utils/useApiCache";
+import { TableRowSkeleton, FreshnessBadge, Shimmer } from "../components/LoadingSkeleton";
 import {
   Wind,
   Droplets,
@@ -106,8 +108,6 @@ const fallbackCities = ["Hyderabad", "Delhi", "Mumbai", "Kolkata", "Bengaluru", 
 
 export default function Overview({ globalCity, setGlobalCity }) {
   const [cities, setCities] = useState([]);
-  const [cityData, setCityData] = useState([]);
-  const [latestAnomaly, setLatestAnomaly] = useState(null);
   const [apiStatus, setApiStatus] = useState("connecting");
 
   useEffect(() => {
@@ -141,16 +141,9 @@ export default function Overview({ globalCity, setGlobalCity }) {
     fetch();
   }, [globalCity, setGlobalCity]);
 
-  const fetchLatestAnomaly = useCallback(() => {
-    if (!globalCity) return;
-    getLatestAnomaly(globalCity)
-      .then(res => setLatestAnomaly(res.data?.data || res.data))
-      .catch(() => setLatestAnomaly(null));
-  }, [globalCity]);
-
-  useEffect(() => {
-    if (cities.length === 0) return;
-    const fetchAll = async () => {
+  const { data: cityDataResults, loading: loadingCityData, isCached: isCityDataCached, lastUpdated: cityDataUpdate } = useApiCache(
+    cities.length ? "overview_city_data" : null,
+    async () => {
       const results = [];
       for (const city of cities) {
         try {
@@ -167,16 +160,23 @@ export default function Overview({ globalCity, setGlobalCity }) {
           results.push({ city, weather: null, aqi: null });
         }
       }
-      setCityData(results);
-    };
-    fetchAll();
-    fetchLatestAnomaly();
-    const interval = setInterval(() => {
-        fetchAll();
-        fetchLatestAnomaly();
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [cities, globalCity, fetchLatestAnomaly]);
+      return results;
+    },
+    { enabled: cities.length > 0, refreshInterval: 15000 }
+  );
+
+  const cityData = cityDataResults || [];
+
+  const { data: latestAnomalyData, loading: loadingAnomaly } = useApiCache(
+    globalCity ? `anomaly_${globalCity}` : null,
+    async () => {
+      const res = await getLatestAnomaly(globalCity);
+      return res.data?.data || res.data;
+    },
+    { enabled: !!globalCity, refreshInterval: 15000 }
+  );
+  
+  const latestAnomaly = latestAnomalyData || null;
 
   const selCard = cityData.find(c => c.city === globalCity) || null;
   const selAqiVal = selCard?.aqi ? calculateIndianAQI(selCard.aqi.components?.pm2_5) : "--";
@@ -187,6 +187,9 @@ export default function Overview({ globalCity, setGlobalCity }) {
       {/* ── TOP: CITY TABLE ───────────────────────── */}
       <div className="px-4">
         <div className="bg-[#0F1221] border border-white/5 rounded-[44px] p-8 shadow-2xl relative group pb-4 overflow-hidden border-b-indigo-500/20">
+          <div className="absolute top-6 right-8">
+            <FreshnessBadge lastUpdated={cityDataUpdate} isCached={isCityDataCached} />
+          </div>
           <table className="w-full text-left">
             <thead className="text-slate-500 text-[9px] font-black uppercase tracking-[0.3em] border-b border-white/5">
               <tr>
@@ -198,7 +201,14 @@ export default function Overview({ globalCity, setGlobalCity }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {cityData.map((item, i) => {
+              {loadingCityData ? (
+                <>
+                  <TableRowSkeleton />
+                  <TableRowSkeleton />
+                  <TableRowSkeleton />
+                  <TableRowSkeleton />
+                </>
+              ) : cityData.map((item, i) => {
                 const aVal = item.aqi ? calculateIndianAQI(item.aqi.components?.pm2_5) : "--";
                 const isSelected = item.city === globalCity;
                 return (
@@ -213,14 +223,14 @@ export default function Overview({ globalCity, setGlobalCity }) {
                             <span className="font-black text-xs text-slate-300 uppercase tracking-widest group-hover:text-white transition-all">{item.city}</span>
                         </div>
                     </td>
-                    <td className="py-6 text-center font-bold text-xs text-slate-400 group-hover:text-white transition-colors">{item.weather?.temperature_c ? item.weather.temperature_c.toFixed(1) : "32.4"}°C</td>
-                    <td className="py-6 text-center font-bold text-xs text-slate-400 group-hover:text-white transition-colors">{item.weather?.humidity ?? 65}%</td>
+                    <td className="py-6 text-center font-bold text-xs text-slate-400 group-hover:text-white transition-colors">{item.weather?.temperature_c != null ? `${item.weather.temperature_c.toFixed(1)}°C` : "--"}</td>
+                    <td className="py-6 text-center font-bold text-xs text-slate-400 group-hover:text-white transition-colors">{item.weather?.humidity != null ? `${item.weather.humidity}%` : "--"}</td>
                     <td className="py-6 text-center">
-                      <span className={`text-[10px] font-black  px-8 py-2 rounded-xl transition-all duration-500 ${aVal > 200 || !item.aqi ? 'text-rose-500 bg-rose-500/10 border border-rose-500/20' : 'text-emerald-500 bg-emerald-500/10 border border-emerald-500/20'}`}>
-                        {aVal === "--" ? "42" : aVal}
+                      <span className={`text-[10px] font-black  px-8 py-2 rounded-xl transition-all duration-500 ${aVal !== "--" && aVal > 200 ? 'text-rose-500 bg-rose-500/10 border border-rose-500/20' : aVal !== "--" ? 'text-emerald-500 bg-emerald-500/10 border border-emerald-500/20' : 'text-slate-500 bg-slate-500/10 border border-slate-500/20'}`}>
+                        {aVal}
                       </span>
                     </td>
-                    <td className="py-6 text-center font-bold text-xs text-slate-400 group-hover:text-white transition-colors">{item.weather?.wind_speed ? item.weather.wind_speed.toFixed(1) : "3.2"} km/h</td>
+                    <td className="py-6 text-center font-bold text-xs text-slate-400 group-hover:text-white transition-colors">{item.weather?.wind_speed != null ? `${item.weather.wind_speed.toFixed(1)} km/h` : "--"}</td>
                   </tr>
                 );
               })}
@@ -256,7 +266,12 @@ export default function Overview({ globalCity, setGlobalCity }) {
                 ACTIVE ALERTS
               </div>
               <div className="space-y-2">
-                 {latestAnomaly ? (
+                 {loadingAnomaly ? (
+                    <>
+                       <Shimmer className="h-6 w-3/4 mb-2" />
+                       <Shimmer className="h-4 w-full" />
+                    </>
+                 ) : latestAnomaly ? (
                     <>
                        <div className="text-xl font-black text-rose-500 leading-none tracking-tight uppercase">
                            1 HIGH PRIORITY
@@ -363,12 +378,12 @@ export default function Overview({ globalCity, setGlobalCity }) {
            <div className="relative z-10 w-full flex flex-col items-start mt-2 pb-2">
               <div className="flex items-end tracking-tighter drop-shadow-xl">
                  <span className="text-6xl font-black text-white leading-none">
-                     {Number(selCard?.weather?.temperature_c ?? 27.32).toFixed(1)}
+                     {selCard?.weather?.temperature_c != null ? Number(selCard.weather.temperature_c).toFixed(1) : "--"}
                  </span>
                  <span className="text-2xl font-black text-indigo-500 ml-1 mb-1 leading-none">°C</span>
               </div>
               <h4 className="text-xl font-black text-slate-300 mt-2 uppercase tracking-widest opacity-90">
-                {selCard?.weather?.weather || "HAZE"}
+                {selCard?.weather?.weather || "---"}
               </h4>
            </div>
 
@@ -377,7 +392,7 @@ export default function Overview({ globalCity, setGlobalCity }) {
                  <Droplets className="w-5 h-5 text-indigo-500/80" strokeWidth={2.5} />
                  <div className="flex flex-col">
                     <span className="text-[8px] font-black text-slate-500 tracking-widest mb-1 uppercase">HUMIDITY</span>
-                    <span className="text-lg font-black text-white leading-none">{selCard?.weather?.humidity ?? 69}%</span>
+                    <span className="text-lg font-black text-white leading-none">{selCard?.weather?.humidity != null ? `${selCard.weather.humidity}%` : "--"}</span>
                  </div>
               </div>
               <div className="bg-[#171A2E] rounded-2xl px-5 py-4 flex items-center gap-4 flex-1 border border-white/5 shadow-sm">
@@ -385,7 +400,7 @@ export default function Overview({ globalCity, setGlobalCity }) {
                  <div className="flex flex-col">
                     <span className="text-[8px] font-black text-slate-500 tracking-widest mb-1 uppercase">WIND</span>
                     <span className="text-lg font-black text-white leading-none inline-flex items-baseline gap-1">
-                        {selCard?.weather?.wind_speed ?? 1.9}
+                        {selCard?.weather?.wind_speed != null ? selCard.weather.wind_speed : "--"}
                         <span className="text-[9px] font-bold text-slate-500 lowercase">km/h</span>
                     </span>
                  </div>

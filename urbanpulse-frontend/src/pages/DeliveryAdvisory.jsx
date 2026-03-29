@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { getLatestAnomaly, getCities } from "../api/api";
 import { Bike, ShieldAlert, Timer, ShieldCheck, Activity } from "lucide-react";
+import { useApiCache } from "../utils/useApiCache";
+import { FreshnessBadge, Shimmer } from "../components/LoadingSkeleton";
 
 export default function DeliveryAdvisory({ globalCity, setGlobalCity }) {
-  const [anomaly, setAnomaly] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [cities, setCities] = useState([]);
 
   useEffect(() => {
@@ -15,31 +15,16 @@ export default function DeliveryAdvisory({ globalCity, setGlobalCity }) {
     }).catch(console.error);
   }, []);
 
-  useEffect(() => {
-    if (!globalCity) return;
-    let cancelled = false;
-    const controller = new AbortController();
+  const { data: anomalyData, loading, isCached, lastUpdated } = useApiCache(
+    globalCity ? `delivery_anomaly_${globalCity}` : null,
+    async () => {
+      const res = await getLatestAnomaly(globalCity);
+      return res.data?.data || res.data;
+    },
+    { enabled: !!globalCity, refreshInterval: 15000 }
+  );
 
-    getLatestAnomaly(globalCity, { signal: controller.signal })
-      .then(res => {
-        if (!cancelled) {
-          setAnomaly(res.data?.data || res.data);
-          setLoading(false);
-        }
-      })
-      .catch(err => {
-        if (!cancelled) {
-          console.error(err);
-          setAnomaly(null);
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [globalCity]);
+  const anomaly = anomalyData || null;
 
   // If no anomaly exists, show a standard fallback
   const advisory = anomaly?.delivery_advisory || {
@@ -63,12 +48,13 @@ export default function DeliveryAdvisory({ globalCity, setGlobalCity }) {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 px-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <span className={`text-4xl drop-shadow-[0_0_15px_rgba(var(--tw-colors-indigo-500),0.5)]`}><Bike className="w-10 h-10 text-indigo-400" /></span>
+            <span className="text-4xl drop-shadow-[0_0_15px_rgba(var(--tw-colors-indigo-500),0.5)]"><Bike className="w-10 h-10 text-indigo-400" /></span>
             <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase text-white leading-none">
               Gig <span className="text-indigo-500">Advisory</span>
             </h1>
           </div>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em]">Targeted Exposure Intelligence for Delivery Networks</p>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] mb-4">Targeted Exposure Intelligence for Delivery Networks</p>
+          <FreshnessBadge lastUpdated={lastUpdated} isCached={isCached} />
         </div>
 
         <div className="flex gap-2 bg-[#0F1221] p-1.5 rounded-2xl border border-white/5 shadow-2xl overflow-x-auto max-w-full">
@@ -102,7 +88,11 @@ export default function DeliveryAdvisory({ globalCity, setGlobalCity }) {
               
               <h4 className="text-[11px] font-black uppercase text-slate-500 tracking-[0.3em] mb-3">Live Risk Level</h4>
               <div className="flex items-end gap-2 text-white">
-                 <span className={`text-6xl font-black tracking-tighter leading-none ${textAccent} drop-shadow-md`}>{advisory.risk_level}</span>
+                 {loading && !anomaly ? (
+                   <Shimmer className="h-14 w-48" />
+                 ) : (
+                   <span className={`text-6xl font-black tracking-tighter leading-none ${textAccent} drop-shadow-md`}>{advisory.risk_level}</span>
+                 )}
               </div>
            </div>
 
@@ -122,9 +112,16 @@ export default function DeliveryAdvisory({ globalCity, setGlobalCity }) {
            </div>
 
            <div className="flex-1 flex flex-col justify-center">
-              <p className="text-xl md:text-3xl font-bold text-slate-200 leading-relaxed mb-10">
-                 {advisory.recommended_action}
-              </p>
+              {loading && !anomaly ? (
+                <>
+                  <Shimmer className="h-8 w-full mb-3" />
+                  <Shimmer className="h-8 w-3/4" />
+                </>
+              ) : (
+                <p className="text-xl md:text-3xl font-bold text-slate-200 leading-relaxed mb-10">
+                   {advisory.recommended_action}
+                </p>
+              )}
            </div>
            
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-auto border-t border-white/5 pt-8">
@@ -132,18 +129,26 @@ export default function DeliveryAdvisory({ globalCity, setGlobalCity }) {
                   <div className="shrink-0 p-3 bg-white/5 rounded-2xl h-fit border border-white/10">
                       <Timer className="w-5 h-5 text-indigo-400" />
                   </div>
-                  <div>
+                  <div className="w-full">
                       <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Exposure Window</h5>
-                      <p className="text-xs font-bold text-slate-300 leading-relaxed">{advisory.risk_window}</p>
+                      {loading && !anomaly ? (
+                        <Shimmer className="h-4 w-full" />
+                      ) : (
+                        <p className="text-xs font-bold text-slate-300 leading-relaxed">{advisory.risk_window}</p>
+                      )}
                   </div>
                </div>
                <div className="flex gap-4">
                   <div className="shrink-0 p-3 bg-white/5 rounded-2xl h-fit border border-emerald-500/20">
                       <ShieldCheck className="w-5 h-5 text-emerald-400" />
                   </div>
-                  <div>
+                  <div className="w-full">
                       <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Safe Operation Window</h5>
-                      <p className="text-xs font-bold text-slate-300 leading-relaxed">{advisory.safe_window}</p>
+                      {loading && !anomaly ? (
+                        <Shimmer className="h-4 w-full" />
+                      ) : (
+                        <p className="text-xs font-bold text-slate-300 leading-relaxed">{advisory.safe_window}</p>
+                      )}
                   </div>
                </div>
            </div>
@@ -151,12 +156,6 @@ export default function DeliveryAdvisory({ globalCity, setGlobalCity }) {
 
       </div>
 
-      {loading && (
-        <div className="text-center pt-10">
-          <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin mx-auto" />
-          <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-4">Syncing Anomaly Engine</p>
-        </div>
-      )}
     </div>
   );
 }

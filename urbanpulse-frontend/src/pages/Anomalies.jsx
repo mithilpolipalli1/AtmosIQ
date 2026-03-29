@@ -1,10 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { getCities, getAnomaliesByCity, getLatestAnomaly } from "../api/api";
+import { useApiCache } from "../utils/useApiCache";
+import { Shimmer, FreshnessBadge } from "../components/LoadingSkeleton";
 
 export default function Anomalies({ globalCity, setGlobalCity }) {
   const [cities, setCities] = useState([]);
-  const [anomalies, setAnomalies] = useState([]);
-  const [latest, setLatest] = useState(null);
 
   useEffect(() => {
     getCities()
@@ -17,24 +17,23 @@ export default function Anomalies({ globalCity, setGlobalCity }) {
       .catch(console.error);
   }, [globalCity, setGlobalCity]);
 
-  const fetchData = useCallback(() => {
-    if (!globalCity) return;
-    Promise.all([
-      getAnomaliesByCity(globalCity).catch(() => ({ data: [] })),
-      getLatestAnomaly(globalCity).catch(() => ({ data: null })),
-    ])
-      .then(([anRes, lRes]) => {
-        setAnomalies(anRes.data?.data || anRes.data || []);
-        setLatest(lRes.data?.data || lRes.data || null);
-      })
-      .catch(console.error);
-  }, [globalCity]);
+  const { data: combinedData, loading, isCached, lastUpdated } = useApiCache(
+    globalCity ? `anomalies_${globalCity}` : null,
+    async () => {
+      const [anRes, lRes] = await Promise.all([
+        getAnomaliesByCity(globalCity).catch(() => ({ data: [] })),
+        getLatestAnomaly(globalCity).catch(() => ({ data: null })),
+      ]);
+      return {
+        anomalies: anRes.data?.data || anRes.data || [],
+        latest: lRes.data?.data || lRes.data || null,
+      };
+    },
+    { enabled: !!globalCity, refreshInterval: 10000 }
+  );
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 10000);
-    return () => clearInterval(interval);
-  }, [fetchData]);
+  const anomalies = combinedData?.anomalies || [];
+  const latest = combinedData?.latest || null;
 
   const getSeverityColor = (severity) => {
     const map = {
@@ -60,10 +59,13 @@ export default function Anomalies({ globalCity, setGlobalCity }) {
     <div className="space-y-6 max-w-[1200px] mx-auto pb-20 text-white">
 
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          🚨 <span>Anomaly Detection</span>
-        </h1>
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            🚨 <span>Anomaly Detection</span>
+          </h1>
+          <FreshnessBadge lastUpdated={lastUpdated} isCached={isCached} />
+        </div>
         <select
           value={globalCity}
           onChange={(e) => setGlobalCity(e.target.value)}
@@ -78,7 +80,13 @@ export default function Anomalies({ globalCity, setGlobalCity }) {
       {/* Latest Anomaly */}
       <div>
         <h2 className="text-lg font-bold mb-4">Latest Anomaly</h2>
-        {latest ? (
+        {loading && !latest ? (
+           <div className="bg-[#0F1221] border border-white/10 rounded-2xl p-6 shadow-lg">
+             <Shimmer className="h-6 w-1/3 mb-4" />
+             <Shimmer className="h-4 w-1/4 mb-1" />
+             <Shimmer className="h-3 w-1/2 mt-4 pt-4 border-t border-white/5" />
+           </div>
+        ) : latest ? (
           <div className="bg-[#0F1221] border border-white/10 rounded-2xl p-6 shadow-lg">
             <div className="flex justify-between items-start mb-4">
               <div>
@@ -123,7 +131,12 @@ export default function Anomalies({ globalCity, setGlobalCity }) {
       <div>
         <h2 className="text-lg font-bold mb-4">All Anomalies — {globalCity}</h2>
         <div className="space-y-3">
-          {anomalies.length > 0 ? anomalies.map((an, i) => (
+          {loading && anomalies.length === 0 ? (
+             <div className="bg-[#0F1221] border border-white/10 rounded-2xl p-5">
+                <Shimmer className="h-4 w-1/3 mb-3" />
+                <Shimmer className="h-4 w-2/3" />
+             </div>
+          ) : anomalies.length > 0 ? anomalies.map((an, i) => (
             <div key={an.id || i} className="bg-[#0F1221] border border-white/10 rounded-2xl p-5">
               <div className="flex justify-between items-start mb-3">
                 <div>

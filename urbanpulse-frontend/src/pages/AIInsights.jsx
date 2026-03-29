@@ -1,6 +1,8 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { getCities, getStoredWeather, getStoredAirQuality, getLatestAnomaly, getAnomaliesByCity } from "../api/api";
 import { calculateIndianAQI } from "../utils/aqiCalc";
+import { useApiCache } from "../utils/useApiCache";
+import { FreshnessBadge, Shimmer } from "../components/LoadingSkeleton";
 
 const LOCAL_AREAS = {
   "Delhi": [
@@ -138,10 +140,6 @@ function getRealWorldSuggestion(weather, humidity) {
 
 export default function AIInsights({ globalCity, setGlobalCity }) {
   const [cities, setCities] = useState([]);
-  const [latest, setLatest] = useState(null);
-  const [allAnomalies, setAllAnomalies] = useState([]);
-  const [weather, setWeather] = useState(null);
-  const [airQuality, setAirQuality] = useState(null);
 
   useEffect(() => {
     getCities().then((res) => {
@@ -151,26 +149,26 @@ export default function AIInsights({ globalCity, setGlobalCity }) {
     });
   }, [globalCity, setGlobalCity]);
 
-  const fetchData = useCallback(() => {
-    if (!globalCity) return;
-    Promise.all([
-      getLatestAnomaly(globalCity).catch(() => ({ data: null })),
-      getStoredWeather(globalCity).catch(() => ({ data: null })),
-      getStoredAirQuality(globalCity).catch(() => ({ data: null })),
-      getAnomaliesByCity(globalCity).catch(() => ({ data: [] })),
-    ]).then(([anRes, wRes, aRes, allAnRes]) => {
-      setLatest(anRes.data?.data || anRes.data || null);
-      setWeather(wRes.data?.data || wRes.data || null);
-      setAirQuality(aRes.data?.data || aRes.data || null);
-      setAllAnomalies(allAnRes.data?.data || allAnRes.data || []);
-    });
-  }, [globalCity]);
+  const { data: combinedData, loading, isCached, lastUpdated } = useApiCache(
+    globalCity ? `insights_${globalCity}` : null,
+    async () => {
+      const [anRes, wRes, aRes, allAnRes] = await Promise.all([
+        getLatestAnomaly(globalCity).catch(() => ({ data: null })),
+        getStoredWeather(globalCity).catch(() => ({ data: null })),
+        getStoredAirQuality(globalCity).catch(() => ({ data: null })),
+        getAnomaliesByCity(globalCity).catch(() => ({ data: [] })),
+      ]);
+      return {
+        latest: anRes.data?.data || anRes.data || null,
+        weather: wRes.data?.data || wRes.data || null,
+        airQuality: aRes.data?.data || aRes.data || null,
+        allAnomalies: allAnRes.data?.data || allAnRes.data || []
+      };
+    },
+    { enabled: !!globalCity, refreshInterval: 15000 }
+  );
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 10000);
-    return () => clearInterval(interval);
-  }, [fetchData]);
+  const { latest, weather, airQuality, allAnomalies } = combinedData || {};
 
   const aqiVal = airQuality ? calculateIndianAQI(airQuality.components?.pm2_5) : 0;
   const anomalyList = Array.isArray(allAnomalies) ? allAnomalies : [];
@@ -201,15 +199,14 @@ export default function AIInsights({ globalCity, setGlobalCity }) {
 
       {/* ── HEADER ────────────────────────────────────────────── */}
       <div className="flex justify-between items-center px-4">
-        <h1 className="text-3xl font-black uppercase tracking-tighter flex items-center gap-3 drop-shadow-md">
-          <span className="bg-[#1A1F36] p-2 rounded-xl border border-white/10 shadow-lg">🤖</span>
-          <span>AI Environmental <span className="text-indigo-500">Insights</span></span>
-        </h1>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-[#0F1221] border border-white/5 px-4 py-2.5 rounded-xl shadow-md">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Live Syncing</span>
-          </div>
+          <h1 className="text-3xl font-black uppercase tracking-tighter flex items-center gap-3 drop-shadow-md">
+            <span className="bg-[#1A1F36] p-2 rounded-xl border border-white/10 shadow-lg">🤖</span>
+            <span>AI Environmental <span className="text-indigo-500">Insights</span></span>
+          </h1>
+          <FreshnessBadge lastUpdated={lastUpdated} isCached={isCached} />
+        </div>
+        <div className="flex items-center gap-4">
           <select
             value={globalCity}
             onChange={(e) => setGlobalCity(e.target.value)}
@@ -230,15 +227,21 @@ export default function AIInsights({ globalCity, setGlobalCity }) {
             <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
               <span className="text-indigo-400">📊</span> Environmental Risk Score
             </h3>
-            <div className="flex items-baseline gap-2 mb-3 mt-2">
-              <span className="text-6xl font-black text-white tracking-tighter drop-shadow-md">{riskScore}</span>
-              <span className="text-xs font-black text-slate-600 uppercase tracking-widest">/ 100</span>
-            </div>
-            <div className="w-full h-1.5 bg-[#1A1F36] rounded-full overflow-hidden mb-4">
-              <div className={`h-full rounded-full transition-all duration-1000 ${riskBarColor} shadow-[0_0_10px_currentColor]`} style={{ width: `${riskScore}%` }} />
-            </div>
-            <p className={`text-[11px] font-black uppercase tracking-widest ${riskColor}`}>{riskLabel}</p>
-            <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1 opacity-60">Isolation Forest + Z-Score analysis</p>
+            {loading && !combinedData ? (
+              <Shimmer className="h-20 w-3/4" />
+            ) : (
+              <>
+                <div className="flex items-baseline gap-2 mb-3 mt-2">
+                  <span className="text-6xl font-black text-white tracking-tighter drop-shadow-md">{riskScore}</span>
+                  <span className="text-xs font-black text-slate-600 uppercase tracking-widest">/ 100</span>
+                </div>
+                <div className="w-full h-1.5 bg-[#1A1F36] rounded-full overflow-hidden mb-4">
+                  <div className={`h-full rounded-full transition-all duration-1000 ${riskBarColor} shadow-[0_0_10px_currentColor]`} style={{ width: `${riskScore}%` }} />
+                </div>
+                <p className={`text-[11px] font-black uppercase tracking-widest ${riskColor}`}>{riskLabel}</p>
+                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1 opacity-60">Isolation Forest + Z-Score analysis</p>
+              </>
+            )}
           </div>
 
           {/* Anomaly Breakdown */}
@@ -246,36 +249,45 @@ export default function AIInsights({ globalCity, setGlobalCity }) {
             <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
               <span className="text-rose-400">🚨</span> Anomaly Breakdown
             </h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center pb-3 border-b border-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Critical</span>
-                </div>
-                <span className="text-lg font-black text-red-500 leading-none">{severityCounts.critical}</span>
+            {loading && !combinedData ? (
+              <div className="space-y-4">
+                <Shimmer className="h-6 w-full" />
+                <Shimmer className="h-6 w-full" />
+                <Shimmer className="h-6 w-full" />
+                <Shimmer className="h-6 w-full" />
               </div>
-              <div className="flex justify-between items-center pb-3 border-b border-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.8)]" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">High</span>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center pb-3 border-b border-white/5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Critical</span>
+                  </div>
+                  <span className="text-lg font-black text-red-500 leading-none">{severityCounts.critical}</span>
                 </div>
-                <span className="text-lg font-black text-orange-500 leading-none">{severityCounts.high}</span>
-              </div>
-              <div className="flex justify-between items-center pb-3 border-b border-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Medium</span>
+                <div className="flex justify-between items-center pb-3 border-b border-white/5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.8)]" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">High</span>
+                  </div>
+                  <span className="text-lg font-black text-orange-500 leading-none">{severityCounts.high}</span>
                 </div>
-                <span className="text-lg font-black text-amber-500 leading-none">{severityCounts.medium}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Low</span>
+                <div className="flex justify-between items-center pb-3 border-b border-white/5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Medium</span>
+                  </div>
+                  <span className="text-lg font-black text-amber-500 leading-none">{severityCounts.medium}</span>
                 </div>
-                <span className="text-lg font-black text-emerald-500 leading-none">{severityCounts.low}</span>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Low</span>
+                  </div>
+                  <span className="text-lg font-black text-emerald-500 leading-none">{severityCounts.low}</span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Current Conditions */}
@@ -283,24 +295,33 @@ export default function AIInsights({ globalCity, setGlobalCity }) {
             <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
               <span className="text-emerald-400">🌍</span> Current Conditions
             </h3>
-            <div className="space-y-5">
-              <div className="flex justify-between items-center">
-                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Temperature</span>
-                <span className="text-base font-black text-white">{weather?.temperature_c?.toFixed(2) || "--"}°C</span>
+            {loading && !combinedData ? (
+              <div className="space-y-4">
+                <Shimmer className="h-6 w-full" />
+                <Shimmer className="h-6 w-full" />
+                <Shimmer className="h-6 w-full" />
+                <Shimmer className="h-6 w-full" />
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Humidity</span>
-                <span className="text-base font-black text-white">{weather?.humidity || "--"}%</span>
+            ) : (
+              <div className="space-y-5">
+                <div className="flex justify-between items-center">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Temperature</span>
+                  <span className="text-base font-black text-white">{weather?.temperature_c?.toFixed(1) || "--"}°C</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Humidity</span>
+                  <span className="text-base font-black text-white">{weather?.humidity || "--"}%</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Wind</span>
+                  <span className="text-base font-black text-white">{weather?.wind_speed || "--"} km/h</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">AQI</span>
+                  <span className="text-base font-black text-amber-400">{aqiVal || "--"}</span>
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Wind</span>
-                <span className="text-base font-black text-white">{weather?.wind_speed || "--"} km/h</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">AQI</span>
-                <span className="text-base font-black text-amber-400">{aqiVal || "--"}</span>
-              </div>
-            </div>
+            )}
           </div>
 
         </div>
@@ -324,7 +345,13 @@ export default function AIInsights({ globalCity, setGlobalCity }) {
                     </span>
                   )}
                 </div>
-                {latest ? (
+                {loading && !combinedData ? (
+                  <>
+                    <Shimmer className="h-4 w-1/4 mb-4" />
+                    <Shimmer className="h-6 w-full mb-2" />
+                    <Shimmer className="h-6 w-3/4" />
+                  </>
+                ) : latest ? (
                   <>
                     <div className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-4 flex gap-4">
                       <span>LOCATION: {latest.city || globalCity}</span>
@@ -378,7 +405,11 @@ export default function AIInsights({ globalCity, setGlobalCity }) {
                         </span>
                       </td>
                       <td className="py-5 text-center">
-                        <span className="text-base font-black text-indigo-400">{area.aqi}</span>
+                        <span className={`text-base font-black py-1 px-3 rounded-md ${
+                          area.aqi > 100 ? "text-amber-400 bg-amber-500/10 border border-amber-500/20" : "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
+                        }`}>
+                          {area.aqi}
+                        </span>
                       </td>
                       <td className="py-5 text-center text-sm font-bold text-slate-400">{area.temp}</td>
                       <td className="py-5 text-center text-sm font-bold text-slate-400">{area.humidity}</td>
@@ -406,7 +437,12 @@ export default function AIInsights({ globalCity, setGlobalCity }) {
             <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-6">Immediate guidance</p>
           </div>
           <div className="space-y-4">
-             {actionPlans.map((plan, i) => (
+             {loading && !combinedData ? (
+               <>
+                 <Shimmer className="h-16 w-full rounded-2xl" />
+                 <Shimmer className="h-16 w-full rounded-2xl" />
+               </>
+             ) : actionPlans.map((plan, i) => (
                 <div key={i} className="flex items-start gap-4 bg-[#1A1F36] rounded-2xl p-4 border border-white/5">
                   <span className="text-xl drop-shadow-md shrink-0 mt-0.5">{plan.icon}</span>
                   <p className="text-xs font-bold text-slate-300 leading-relaxed">{plan.text}</p>
@@ -424,10 +460,14 @@ export default function AIInsights({ globalCity, setGlobalCity }) {
             </div>
             <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-6">Everyday practical actions</p>
           </div>
-          <div className="flex items-start gap-4 bg-[#1A1F36] rounded-2xl p-5 border border-white/5">
-            <span className="text-2xl drop-shadow-md shrink-0">{suggestion.icon}</span>
-            <p className="text-sm font-bold text-slate-300 leading-relaxed">{suggestion.text}</p>
-          </div>
+          {loading && !combinedData ? (
+            <Shimmer className="flex items-start gap-4 bg-[#1A1F36] rounded-2xl p-5 border border-white/5 h-20" />
+          ) : (
+            <div className="flex items-start gap-4 bg-[#1A1F36] rounded-2xl p-5 border border-white/5">
+              <span className="text-2xl drop-shadow-md shrink-0">{suggestion.icon}</span>
+              <p className="text-sm font-bold text-slate-300 leading-relaxed">{suggestion.text}</p>
+            </div>
+          )}
         </div>
 
         {/* Fix the Cause */}
@@ -440,7 +480,12 @@ export default function AIInsights({ globalCity, setGlobalCity }) {
             <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-6">Community campaigns</p>
           </div>
           <div className="space-y-4">
-            {actions.slice(0, 2).map((action, i) => (
+            {loading && !combinedData ? (
+               <>
+                 <Shimmer className="h-24 w-full rounded-2xl" />
+                 <Shimmer className="h-24 w-full rounded-2xl" />
+               </>
+            ) : actions.slice(0, 2).map((action, i) => (
               <div key={i}>
                 {action.donate ? (
                   <div className={`space-y-3 p-4 bg-[#1A1F36] border ${action.borderColor} rounded-2xl relative overflow-hidden`}>

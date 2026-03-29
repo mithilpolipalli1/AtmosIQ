@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import Overview from "./pages/Overview";
@@ -8,9 +8,15 @@ import MapView from "./pages/MapView";
 import AIInsights from "./pages/AIInsights";
 import DeliveryAdvisory from "./pages/DeliveryAdvisory";
 import Home from "./pages/Home";
+import { warmUpBackend } from "./api/api";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("Home");
+
+  // Fire warm-up ping immediately on app load — wakes Render before user clicks anything
+  useEffect(() => {
+    warmUpBackend();
+  }, []);
 
   // Keep state for city globally
   const [globalCity, setGlobalCity] = useState("Hyderabad");

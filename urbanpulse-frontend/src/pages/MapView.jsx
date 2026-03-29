@@ -3,12 +3,12 @@ import { getCities, getStoredWeather, getStoredAirQuality } from "../api/api";
 import { calculateIndianAQI, getAqiCategory } from "../utils/aqiCalc";
 import { MapContainer, TileLayer, CircleMarker, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { useApiCache } from "../utils/useApiCache";
+import { FreshnessBadge, Shimmer } from "../components/LoadingSkeleton";
 
 // ─── Component ──────────────────────────────────────────────────────────────
 export default function MapView({ globalCity, setGlobalCity }) {
   const [cities, setCities] = useState([]);
-  const [cityData, setCityData] = useState([]);
-  const [_loading, setLoading] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
 
   const now = new Date();
@@ -26,9 +26,9 @@ export default function MapView({ globalCity, setGlobalCity }) {
       .catch(console.error);
   }, [globalCity, setGlobalCity]);
 
-  useEffect(() => {
-    if (cities.length === 0) return;
-    const fetchAll = async () => {
+  const { data: cityDataResults, loading, isCached, lastUpdated } = useApiCache(
+    cities.length > 0 ? "mapview_city_data" : null,
+    async () => {
       const results = [];
       for (const city of cities) {
         try {
@@ -45,14 +45,12 @@ export default function MapView({ globalCity, setGlobalCity }) {
           results.push({ city, weather: null, aqi: null });
         }
       }
-      setCityData(results);
-      setLoading(false);
-    };
-    fetchAll();
-    const interval = setInterval(fetchAll, 15000);
-    return () => clearInterval(interval);
-  }, [cities]);
+      return results;
+    },
+    { enabled: cities.length > 0, refreshInterval: 15000 }
+  );
 
+  const cityData = cityDataResults || [];
   const selCard = cityData.find(c => c.city === globalCity) || null;
   const selAqiVal = selCard?.aqi ? calculateIndianAQI(selCard.aqi.components?.pm2_5) : "--";
 
@@ -71,7 +69,7 @@ export default function MapView({ globalCity, setGlobalCity }) {
              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
-          {cityData.map((item, idx) => {
+          {!loading && cityData.map((item, idx) => {
             if (!item.aqi || !item.aqi.lat) return null;
             return (
               <CircleMarker 
@@ -106,9 +104,9 @@ export default function MapView({ globalCity, setGlobalCity }) {
            Air Quality <span className="text-slate-500 opacity-60">Index</span>
          </h1>
          <div className="mt-4 flex flex-col gap-2">
-            <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.4em]">{dateStr} {timeStr}</p>
-            <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.2em] italic border-l-2 border-slate-700 pl-4">
-              Local ➔ {globalCity.toUpperCase()}
+            <FreshnessBadge lastUpdated={lastUpdated} isCached={isCached} />
+            <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.2em] italic border-l-2 border-slate-700 pl-4 mt-1">
+              Local ➔ {globalCity?.toUpperCase()}
             </p>
          </div>
       </div>
@@ -116,17 +114,31 @@ export default function MapView({ globalCity, setGlobalCity }) {
       {/* ── TOP LAYER: SATISFACTORY CARD (Center-Top) ─────────── */}
       <div className="absolute top-10 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
           <div className="bg-[#1e253c]/95 backdrop-blur-md rounded-3xl p-5 border border-white/10 shadow-2xl flex items-center gap-6 min-w-[300px]">
-             <div className="w-14 h-14 bg-emerald-500 rounded-2xl flex items-center justify-center text-3xl font-black shadow-emerald-500/20 shadow-[0_0_20px] text-white">
-                {selAqiVal}
-             </div>
-             <div className="space-y-1.5 flex-1">
-                <p className="text-white text-sm font-black uppercase tracking-tight leading-none">{getAqiCategory(selAqiVal)}</p>
-                <p className="text-slate-400 text-[9px] font-black uppercase tracking-widest leading-none">In {globalCity}</p>
-                <div className="flex gap-4 pt-1 opacity-80">
-                   <span className="text-[10px] font-bold text-slate-300 tracking-tight">🌡 {selCard?.weather?.temperature_c ?? 22}°</span>
-                   <span className="text-[10px] font-bold text-slate-300 tracking-tight">💧 {selCard?.weather?.humidity ?? 70}%</span>
-                   <span className="text-[10px] font-bold text-slate-300 tracking-tight">🌬 {selCard?.weather?.wind_speed ?? 2} <span className="lowercase text-[8px]">km/h</span></span>
-                </div>
+             {loading && cityData.length === 0 ? (
+               <Shimmer className="w-14 h-14 rounded-2xl" />
+             ) : (
+               <div className="w-14 h-14 bg-emerald-500 rounded-2xl flex items-center justify-center text-3xl font-black shadow-emerald-500/20 shadow-[0_0_20px] text-white">
+                  {selAqiVal}
+               </div>
+             )}
+             <div className="space-y-1.5 flex-1 w-full">
+                {loading && cityData.length === 0 ? (
+                  <>
+                    <Shimmer className="h-4 w-2/3" />
+                    <Shimmer className="h-3 w-1/3" />
+                    <Shimmer className="h-3 w-full mt-2" />
+                  </>
+                ) : (
+                  <>
+                    <p className="text-white text-sm font-black uppercase tracking-tight leading-none">{selAqiVal !== "--" ? getAqiCategory(selAqiVal) : "Loading..."}</p>
+                    <p className="text-slate-400 text-[9px] font-black uppercase tracking-widest leading-none">In {globalCity}</p>
+                    <div className="flex gap-4 pt-1 opacity-80">
+                       <span className="text-[10px] font-bold text-slate-300 tracking-tight">🌡 {selCard?.weather?.temperature_c ?? "--"}°</span>
+                       <span className="text-[10px] font-bold text-slate-300 tracking-tight">💧 {selCard?.weather?.humidity ?? "--"}%</span>
+                       <span className="text-[10px] font-bold text-slate-300 tracking-tight">🌬 {selCard?.weather?.wind_speed ?? "--"} <span className="lowercase text-[8px]">km/h</span></span>
+                    </div>
+                  </>
+                )}
              </div>
           </div>
       </div>
@@ -137,9 +149,13 @@ export default function MapView({ globalCity, setGlobalCity }) {
             <div>
                <h2 className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-8 italic">Main Statistics</h2>
                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest opacity-60 mb-2">AQI</p>
-               <div className="text-6xl font-black text-white tracking-tighter leading-none drop-shadow-2xl">
-                  {selAqiVal}
-               </div>
+               {loading && cityData.length === 0 ? (
+                 <Shimmer className="h-16 w-24 mb-6" />
+               ) : (
+                 <div className="text-6xl font-black text-white tracking-tighter leading-none drop-shadow-2xl">
+                    {selAqiVal}
+                 </div>
+               )}
                <div className="flex justify-between items-center mt-5">
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Dominant Pollutant <span className="text-white ml-2">PM2.5 — Wind</span></p>
                </div>
@@ -160,7 +176,7 @@ export default function MapView({ globalCity, setGlobalCity }) {
                   </button>
                </div>
                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                  <div className="bg-[#fca311] h-full" style={{ width: `${Math.min((selAqiVal / 500) * 100, 100)}%` }}></div>
+                  <div className="bg-[#fca311] h-full transition-all" style={{ width: `${Math.min(((selAqiVal === "--" ? 0 : selAqiVal) / 500) * 100, 100)}%` }}></div>
                </div>
             </div>
 
