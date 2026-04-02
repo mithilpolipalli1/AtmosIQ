@@ -20,9 +20,9 @@ export default function Sidebar({ activeTab, setActiveTab }) {
   ];
 
   return (
-    <div className="w-[300px] bg-[#0A0D1A] border-r border-white/5 min-h-screen flex flex-col shrink-0 px-8 py-12 text-white shadow-2xl relative overflow-hidden">
+    <div className="w-[300px] bg-brand-card border-r border-[#ffffff0a] min-h-screen flex flex-col shrink-0 px-8 py-12 text-white shadow-2xl relative overflow-hidden z-20">
       {/* Decorative Glow */}
-      <div className="absolute top-0 -left-20 w-40 h-40 bg-indigo-600/10 blur-[80px] rounded-full pointer-events-none" />
+      <div className="absolute top-0 -left-20 w-40 h-40 bg-indigo-600/10 blur-[80px] rounded-full pointer-events-none animate-pulse-slow" />
       
       {/* Brand Header */}
       <div 

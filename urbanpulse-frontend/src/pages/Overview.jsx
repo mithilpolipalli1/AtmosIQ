@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { getCities, getStoredWeather, getStoredAirQuality, getLatestAnomaly } from "../api/api";
 import { calculateIndianAQI } from "../utils/aqiCalc";
 import { MapContainer, TileLayer, CircleMarker, Tooltip } from "react-leaflet";
@@ -21,6 +21,7 @@ import {
   CloudRain,
   CloudLightning
 } from "lucide-react";
+import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 
 // ── 3D Glassmorphic Weather Models ──
 const render3DWeatherModel = (condition) => {
@@ -181,12 +182,29 @@ export default function Overview({ globalCity, setGlobalCity }) {
   const selCard = cityData.find(c => c.city === globalCity) || null;
   const selAqiVal = selCard?.aqi ? calculateIndianAQI(selCard.aqi.components?.pm2_5) : "--";
 
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2,
+      }
+    }
+  };
+
+  const itemAnim = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+  };
+
   return (
-    <div className="space-y-10 max-w-[1500px] mx-auto pb-40 animate-in fade-in slide-in-from-bottom-6 duration-1000 text-white font-sans">
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-10 max-w-[1500px] mx-auto pb-40 text-white font-sans">
 
       {/* ── TOP: CITY TABLE ───────────────────────── */}
-      <div className="px-4">
-        <div className="bg-[#0F1221] border border-white/5 rounded-[44px] p-8 shadow-2xl relative group pb-4 overflow-hidden border-b-indigo-500/20">
+      <motion.div variants={itemAnim} className="px-4">
+        <div className="glass-panel glass-panel-hover rounded-[44px] p-8 relative overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none animate-blob" />
           <div className="absolute top-6 right-8">
             <FreshnessBadge lastUpdated={cityDataUpdate} isCached={isCityDataCached} />
           </div>
@@ -237,17 +255,16 @@ export default function Overview({ globalCity, setGlobalCity }) {
             </tbody>
           </table>
         </div>
-      </div>
+      </motion.div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-10 px-4 items-stretch">
 
         {/* ── LEFT: ANALYTICS CARDS ────────────── */}
-        {/* ── LEFT: ANALYTICS CARDS ────────────── */}
-        {/* ── LEFT: ANALYTICS CARDS ────────────── */}
-        <div className="xl:col-span-3 space-y-6 flex flex-col h-full">
+        <div className="xl:col-span-3 space-y-6 flex flex-col h-full z-10">
            {/* Card 1 */}
-           <div className="bg-[#0F1221] border border-white/5 rounded-3xl p-6 shadow-2xl flex-1 flex flex-col justify-center">
-              <div className="flex items-center gap-2 text-[10px] font-black tracking-widest uppercase text-slate-500 mb-3">
+           <motion.div variants={itemAnim} className="glass-panel glass-panel-hover rounded-3xl p-6 flex-1 flex flex-col justify-center relative overflow-hidden">
+              <div className="absolute bottom-0 right-0 w-32 h-32 bg-indigo-500/10 blur-[50px] pointer-events-none" />
+              <div className="flex items-center gap-2 text-[10px] font-black tracking-widest uppercase text-slate-500 mb-3 relative z-10">
                 <BarChart3 className="w-3.5 h-3.5 text-indigo-500" />
                 AVERAGE AQI
               </div>
@@ -257,11 +274,12 @@ export default function Overview({ globalCity, setGlobalCity }) {
                  </span>
                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">(GOOD)</span>
               </div>
-           </div>
+           </motion.div>
 
            {/* Card 2 */}
-           <div className="bg-[#0F1221] border border-white/5 border-l-4 border-l-rose-500 rounded-3xl p-6 shadow-2xl flex-1 flex flex-col justify-center">
-              <div className="flex items-center gap-2 text-[10px] font-black tracking-widest uppercase text-slate-500 mb-3">
+           <motion.div variants={itemAnim} className="glass-panel glass-panel-hover border-l-4 border-l-rose-500 rounded-3xl p-6 flex-1 flex flex-col justify-center relative overflow-hidden">
+              <div className="absolute bottom-0 right-0 w-32 h-32 bg-rose-500/10 blur-[50px] pointer-events-none" />
+              <div className="flex items-center gap-2 text-[10px] font-black tracking-widest uppercase text-slate-500 mb-3 relative z-10">
                 <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
                 ACTIVE ALERTS
               </div>
@@ -291,22 +309,23 @@ export default function Overview({ globalCity, setGlobalCity }) {
                     </>
                  )}
               </div>
-           </div>
+           </motion.div>
 
            {/* Card 3 */}
-           <div className="bg-[#0F1221] border border-white/5 rounded-3xl p-6 shadow-2xl flex-1 flex flex-col justify-center">
-              <div className="flex items-center gap-2 text-[10px] font-black tracking-widest uppercase text-slate-500 mb-3">
+           <motion.div variants={itemAnim} className="glass-panel glass-panel-hover rounded-3xl p-6 flex-1 flex flex-col justify-center relative overflow-hidden">
+               <div className="absolute bottom-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[50px] pointer-events-none" />
+              <div className="flex items-center gap-2 text-[10px] font-black tracking-widest uppercase text-slate-500 mb-3 relative z-10">
                 <Activity className="w-3.5 h-3.5 text-indigo-400" />
                 DATA POINTS
               </div>
               <div className="flex items-baseline">
                  <span className="text-4xl font-black text-white tracking-tighter drop-shadow-md">1.2M</span>
               </div>
-           </div>
+           </motion.div>
         </div>
 
         {/* ── CENTER: MAP ─────────────────── */}
-        <div className="xl:col-span-5 bg-[#0F1221] border border-white/5 rounded-3xl shadow-2xl relative overflow-hidden group min-h-[400px] lg:min-h-[500px]">
+        <motion.div variants={itemAnim} className="xl:col-span-5 glass-panel glass-panel-hover rounded-[40px] relative overflow-hidden group min-h-[400px] lg:min-h-[500px] z-10">
             <div className="absolute top-6 left-6 z-30 pointer-events-none drop-shadow-xl">
                <h3 className="text-xl font-black tracking-tighter uppercase text-white leading-none mb-1">AQI OVERVIEW</h3>
                <div className="flex items-center gap-2">
@@ -315,7 +334,7 @@ export default function Overview({ globalCity, setGlobalCity }) {
                </div>
            </div>
 
-           <div className="w-full h-full absolute inset-0 z-0 bg-[#070913]">
+           <div className="w-full h-full absolute inset-0 z-0 bg-transparent">
              <MapContainer center={[20, 78]} zoom={4.5} className="w-full h-full" zoomControl={false}>
                <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
                {cityData.map((item, idx) => (
@@ -347,7 +366,12 @@ export default function Overview({ globalCity, setGlobalCity }) {
            </div>
 
            {/* Floating City Card */}
-           <div className="absolute bottom-6 left-6 z-40 bg-[#16192B] border border-white/5 rounded-2xl p-5 min-w-[160px] shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+           <motion.div 
+             initial={{ y: 20, opacity: 0 }}
+             animate={{ y: 0, opacity: 1 }}
+             transition={{ delay: 0.5, type: "spring" }}
+             className="absolute bottom-6 left-6 z-40 bg-brand-bg border border-[#ffffff15] rounded-3xl p-6 min-w-[180px] shadow-[0_10px_40px_rgba(0,0,0,0.8)] backdrop-blur-xl"
+           >
               <div className="flex items-center gap-2 mb-2">
                  <Globe className="w-3.5 h-3.5 text-indigo-500" />
                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{globalCity}</p>
@@ -356,11 +380,11 @@ export default function Overview({ globalCity, setGlobalCity }) {
               <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
                  <div className={`h-full transition-all duration-1000 ${selAqiVal > 200 ? 'bg-rose-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min((selAqiVal / 500) * 100, 100)}%` }}></div>
               </div>
-           </div>
-        </div>
+           </motion.div>
+        </motion.div>
 
         {/* ── RIGHT: WEATHER CARD ──────────── */}
-        <div className="xl:col-span-4 bg-[#0F1221] border border-white/5 rounded-3xl shadow-2xl relative overflow-hidden group p-8 flex flex-col justify-between">
+        <motion.div variants={itemAnim} className="xl:col-span-4 glass-panel glass-panel-hover rounded-[40px] relative overflow-hidden group p-8 flex flex-col justify-between z-10">
            
            <div className="relative z-10 flex justify-between items-start w-full">
               <div className="flex items-center gap-2 bg-[#1A1F36] rounded-full px-4 py-2 shadow-sm border border-white/5 h-fit mt-2">
@@ -406,9 +430,8 @@ export default function Overview({ globalCity, setGlobalCity }) {
                  </div>
               </div>
            </div>
-        </div>
-
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }

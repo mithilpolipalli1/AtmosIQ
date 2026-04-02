@@ -18,10 +18,10 @@ export default function Home({ onDiscover }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#070913] text-white font-sans selection:bg-blue-500/30">
+    <div className="min-h-screen bg-brand-bg text-white font-sans selection:bg-indigo-500/30">
       
       {/* ── STICKY TOP NAVIGATION ───────────────────────────────────── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 px-10 py-6 flex justify-between items-center backdrop-blur-md bg-[#070913]/60 border-b border-white/5">
+      <nav className="fixed top-0 left-0 right-0 z-50 px-10 py-6 flex justify-between items-center backdrop-blur-md bg-brand-bg/80 border-b border-[#ffffff0a]">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-2xl shadow-xl shadow-blue-900/40">🌍</div>
           <span className="text-2xl font-bold tracking-tighter cursor-pointer" onClick={() => window.scrollTo(0, 0)}>Atmos<span className="text-blue-500">IQ</span></span>
@@ -67,7 +67,7 @@ export default function Home({ onDiscover }) {
       </section>
 
       {/* ── VISION SECTION ─────────────────────────────────────────── */}
-      <section id="vision" className="relative py-40 px-10 md:px-20 bg-[#0A0C16]">
+      <section id="vision" className="relative py-40 px-10 md:px-20 bg-brand-card">
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
           
           <div className="space-y-12">
@@ -94,7 +94,7 @@ export default function Home({ onDiscover }) {
             </div>
           </div>
 
-          <div id="aims" className="space-y-12 bg-linear-to-br from-blue-900/10 to-[#070913] border border-white/5 p-12 md:p-16 rounded-[60px] shadow-2xl relative overflow-hidden group transition-all duration-700 hover:border-emerald-500/20">
+          <div id="aims" className="space-y-12 bg-linear-to-br from-indigo-900/10 to-brand-bg border border-[#ffffff0a] p-12 md:p-16 rounded-[60px] shadow-2xl relative overflow-hidden group transition-all duration-700 hover:border-emerald-500/20">
             <div className="absolute top-[-10%] left-[-10%] w-40 h-40 bg-blue-600/30 blur-[80px] group-hover:bg-blue-600/50 transition-colors"></div>
             
             <span className="text-emerald-500 text-xs font-bold uppercase tracking-[0.5em] italic">02 // The Strategic Aim</span>
@@ -131,7 +131,7 @@ export default function Home({ onDiscover }) {
 
       {/* ── CTA BOTTOM (ENTERPRISE / FINAL) ───────────────────────── */}
       <section id="enterprise" className="py-40 text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-linear-to-b from-[#0A0C16] to-[#070913]"></div>
+        <div className="absolute inset-0 bg-linear-to-b from-brand-card to-brand-bg"></div>
         <div className="relative z-10 space-y-10">
           <h3 className="text-4xl md:text-6xl font-bold italic tracking-tighter leading-none">Ready to Experience <br /> The Intelligence?</h3>
           <button 
@@ -144,7 +144,7 @@ export default function Home({ onDiscover }) {
       </section>
 
       {/* ── FOOTER ─────────────────────────────────────────────────── */}
-      <footer className="py-20 border-t border-white/5 flex flex-col items-center bg-[#070913]">
+      <footer className="py-20 border-t border-[#ffffff0a] flex flex-col items-center bg-brand-bg">
         <div className="flex gap-16 text-[11px] font-bold text-slate-600 uppercase tracking-[0.5em] mb-10 select-none">
           <span>ATMOSIQ // 2026</span>
           <span>•</span>

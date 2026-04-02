@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import Overview from "./pages/Overview";
@@ -45,14 +46,14 @@ export default function App() {
   // If we are on the Home page, show ONLY the Home content for a clean landing experience
   if (activeTab === "Home") {
     return (
-      <div className="min-h-screen bg-[#070913] text-slate-100 font-sans tracking-wide">
+      <div className="min-h-screen text-slate-100 font-sans tracking-wide">
         {renderContent()}
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-[#070913] text-slate-100 font-sans tracking-wide">
+    <div className="flex h-screen text-slate-100 font-sans tracking-wide">
 
       {/* Sidebar */}
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -64,8 +65,16 @@ export default function App() {
         <Header />
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto p-6">
-          {renderContent()}
+        <main className="flex-1 overflow-y-auto p-6 relative z-10">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="h-full"
+          >
+            {renderContent()}
+          </motion.div>
         </main>
 
       </div>
